@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 
 public class PlayerMove : MonoBehaviour
 {
@@ -8,6 +9,11 @@ public class PlayerMove : MonoBehaviour
     Rigidbody2D rb;
     Animator animator;
     SpriteRenderer spriteRenderer;
+    public float knockbackForce = 300f;
+
+    public bool canMove;
+
+    bool invincible = false;
 
     bool canJump = true; // Flag to check if the player can jump
 
@@ -43,6 +49,7 @@ public class PlayerMove : MonoBehaviour
         }
         animator.SetBool("Pulando", !canJump);
 
+
     }
     // FixedUpdate is called at a fixed interval and is independent of frame rate. Put physics code here.
     void FixedUpdate()
@@ -61,16 +68,51 @@ public class PlayerMove : MonoBehaviour
         }
 
     }
-
-    void OnCollisionEnter2D(Collision2D collision)
+    public void DamageTaken(Vector3 relativeImpact)
     {
-        // Check if the player collides with the ground or any other object
-        if (collision.gameObject.CompareTag("Enemy"))
+        animator.SetTrigger("Dano");
+        canMove = false;
+        StartCoroutine(KnockBack(relativeImpact));
+        
+    }
+
+    IEnumerator KnockBack(Vector3 relativeImpact)
+    {
+        yield return new WaitForFixedUpdate(); // Wait for the next physics update
+
+        rb.AddForce(relativeImpact.normalized * knockbackForce, ForceMode2D.Impulse); // Apply knockback force
+
+        yield return new WaitForSeconds(0.2f); // Wait for the knockback effect to finish
+
+        rb.linearVelocity = new Vector2(0, 0);
+
+        canMove = true; // Re-enable movement
+        spriteRenderer.color = Color.white;
+        StartCoroutine(Invincible(2f));
+    }
+
+    IEnumerator Invincible(float time)
+    {
+        float elapsed = 0f;
+        invincible = true;
+        while(true)
         {
-            Destroy(gameObject); // Destroy the player object if it collides with an enemy
+            elapsed += Time.deltaTime;
+            //spriteRenderer = new Color();
+            if(elapsed >= time)
+            {
+                invincible = false;
+                spriteRenderer.color = Color.white;
+                yield break;
+            }
+            yield return new WaitForFixedUpdate();
 
         }
-
+    }
+   
+    void OnCollisionEnter2D(Collision2D collision)
+    {   
+        
         // Check if the player is on the ground
         if (collision.gameObject.CompareTag("Ground"))
         {
